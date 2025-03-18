@@ -1,3 +1,5 @@
+@Field def COVERAGE_METRIC_LINE = null // Khai báo biến toàn cục
+
 pipeline {
     agent any
 
@@ -52,6 +54,7 @@ pipeline {
         stage('Test') {
             steps {
                 script {
+                     COVERAGE_METRIC_LINE = io.jenkins.plugins.coverage.metrics.model.CoverageMetric.LINE //import và khởi tạo biến
                     publishChecks name: 'jenkins', status: 'IN_PROGRESS'
                     def servicesToBuild = env.SERVICES_TO_BUILD ? env.SERVICES_TO_BUILD.split(',') : []
                     for (service in servicesToBuild) {
@@ -88,7 +91,7 @@ pipeline {
                                 println "coverageResult class: ${coverageResult.getClass().getName()}"
 
                                 // Lấy giá trị line coverage
-                                def lineCoverageValue = coverageResult.getValueForMetric(io.jenkins.plugins.coverage.metrics.model.CoverageMetric.LINE)
+                                def lineCoverageValue = coverageResult.getValueForMetric(COVERAGE_METRIC_LINE)
 
                                 if (lineCoverageValue != null) {
                                     println "lineCoverageValue: ${lineCoverageValue}"
