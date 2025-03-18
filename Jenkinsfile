@@ -78,7 +78,7 @@ pipeline {
                             // Ghi nhận coverage và kiểm tra
                             recordCoverage(tools: [[parser: 'JACOCO', pattern: "${service}/target/site/jacoco/jacoco.xml"]])
                             def coverageResult = null
-                            def actions = currentBuild.rawBuild.getActions(hudson.plugins.jacoco.JacocoBuildAction)
+                            def actions = currentBuild.rawBuild.getActions(io.jenkins.plugins.coverage.metrics.steps.CoverageBuildAction)
                             if (actions != null && !actions.isEmpty()) {
                                 coverageResult = actions.get(0)
                             }
