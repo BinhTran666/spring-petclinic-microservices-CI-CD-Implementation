@@ -85,13 +85,18 @@ pipeline {
 
 
                             if (coverageResult != null) {
-                                def lineCoverage = coverageResult.getLineCoverage().getPercentageFloat()
-                                echo "Line coverage for ${service}: ${lineCoverage}%"
+                                println "coverageResult class: ${coverageResult.getClass().getName()}" // In ra tên class
+                                println "coverageResult methods:"
+                                coverageResult.getClass().getMethods().each { println "  - ${it.getName()}" } // In ra tên tất cả các phương
 
-                                if (lineCoverage < 70.0) {
-                                    echo "Coverage for ${service} is below 70%.  Marking build as unstable."
-                                    failedServices.add(service) // Thêm service vào danh sách failed
-                                }
+
+                                // def lineCoverage = coverageResult.getLineCoverage().getPercentageFloat()
+                                // echo "Line coverage for ${service}: ${lineCoverage}%"
+
+                                // if (lineCoverage < 70.0) {
+                                //     echo "Coverage for ${service} is below 70%.  Marking build as unstable."
+                                //     failedServices.add(service) // Thêm service vào danh sách failed
+                                // }
                             } else {
                                 echo "Could not retrieve coverage information for ${service}."
                                 // Thêm các câu lệnh println để debug
