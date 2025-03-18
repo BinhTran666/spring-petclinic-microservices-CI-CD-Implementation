@@ -94,7 +94,25 @@ pipeline {
                                 }
                             } else {
                                 echo "Could not retrieve coverage information for ${service}."
-                                 failedServices.add(service) // coi như coverage không đạt, để an toàn
+                                // Thêm các câu lệnh println để debug
+                                println "coverageResult is null"
+                                if (currentBuild != null) {
+                                    println "currentBuild is not null"
+                                    if(currentBuild.rawBuild != null) {
+                                    println "currentBuild.rawBuild is not null"
+                                        def allActions = currentBuild.rawBuild.getActions() // Lấy tất cả các actions, không lọc
+                                        println "All actions:"
+                                        for (action in allActions) {
+                                            println "  - ${action.getClass().getName()}: ${action.toString()}"
+                                        }
+                                    } else {
+                                    println "currentBuild.rawBuild is null"
+                                    }
+
+                                } else {
+                                println "currentBuild is null"
+                                }
+                                failedServices.add(service) // coi như coverage không đạt, để an toàn
 
                             }
                         }
