@@ -1,5 +1,3 @@
-@Field def COVERAGE_METRIC_LINE = null // Khai báo biến toàn cục
-
 pipeline {
     agent any
 
@@ -54,7 +52,6 @@ pipeline {
         stage('Test') {
             steps {
                 script {
-                     COVERAGE_METRIC_LINE = io.jenkins.plugins.coverage.metrics.model.CoverageMetric.LINE //import và khởi tạo biến
                     publishChecks name: 'jenkins', status: 'IN_PROGRESS'
                     def servicesToBuild = env.SERVICES_TO_BUILD ? env.SERVICES_TO_BUILD.split(',') : []
                     for (service in servicesToBuild) {
@@ -68,7 +65,7 @@ pipeline {
                 always {
                     script {
                         def servicesToBuild = env.SERVICES_TO_BUILD ? env.SERVICES_TO_BUILD.split(',') : []
-                        def failedServices = [] // Danh sách các service không đạt coverage
+                        def failedServices = []
 
                         for (service in servicesToBuild) {
                             def junitReportPath = "${service}/target/surefire-reports/*.xml"
@@ -79,7 +76,6 @@ pipeline {
                                 junit junitReportPath
                             }
 
-                            // Ghi nhận coverage và kiểm tra
                             recordCoverage(tools: [[parser: 'JACOCO', pattern: "${service}/target/site/jacoco/jacoco.xml"]])
                             def coverageResult = null
                             def actions = currentBuild.rawBuild.getActions(io.jenkins.plugins.coverage.metrics.steps.CoverageBuildAction)
@@ -88,16 +84,12 @@ pipeline {
                             }
 
                             if (coverageResult != null) {
-                                println "coverageResult class: ${coverageResult.getClass().getName()}"
+                                def coverageString = coverageResult.toString()
+                                println "coverageString: ${coverageString}"
 
-                                // Lấy giá trị line coverage
-                                def lineCoverageValue = coverageResult.getValueForMetric(COVERAGE_METRIC_LINE)
-
-                                if (lineCoverageValue != null) {
-                                    println "lineCoverageValue: ${lineCoverageValue}"
-                                    println "lineCoverageValue class: ${lineCoverageValue.getClass().getName()}"
-                                    def lineCoverage = lineCoverageValue.getPercentageFloat()
-
+                                def matcher = (coverageString =~ /LINE: (\d+\.\d+)%/)
+                                if (matcher.find()) {
+                                    def lineCoverage = matcher[0][1].toFloat()
                                     echo "Line coverage for ${service}: ${lineCoverage}%"
 
                                     if (lineCoverage < 70.0) {
@@ -105,16 +97,15 @@ pipeline {
                                         failedServices.add(service)
                                     }
                                 } else {
-                                    echo "Could not get line coverage value using getValueForMetric"
-                                    failedServices.add(service) // Thêm service vào failedServices nếu không lấy được coverage
+                                    echo "Could not extract line coverage from string."
+                                    failedServices.add(service)
                                 }
                             } else {
                                 echo "Could not retrieve coverage information for ${service}."
-                                failedServices.add(service)  // Thêm service vào failedServices nếu không lấy được coverageResult
+                                failedServices.add(service)
                             }
                         }
 
-                        // Kiểm tra danh sách failedServices và đánh dấu build failure nếu cần
                         if (!failedServices.isEmpty()) {
                             currentBuild.result = 'FAILURE'
                             echo "The following services failed to meet the coverage threshold: ${failedServices.join(', ')}"
@@ -124,9 +115,9 @@ pipeline {
             }
         }
 
-        stage('Build') {
-            steps {
-                script {
+       stage('Build') {
+           steps {
+               script {
                     def servicesToBuild = env.SERVICES_TO_BUILD ? env.SERVICES_TO_BUILD.split(',') : []
                     for (service in servicesToBuild) {
                         dir(service) {
@@ -134,31 +125,32 @@ pipeline {
                         }
                     }
                 }
-            }
-        }
+           }
+       }
     }
-
     post {
         always {
             script {
                 def servicesToBuild = env.SERVICES_TO_BUILD ? env.SERVICES_TO_BUILD.split(',') : []
+
                 for (service in servicesToBuild) {
                     archiveArtifacts artifacts: "${service}/target/*.jar", fingerprint: true
                 }
             }
         }
-        success {
+
+        success{
             step([
                 $class: 'GitHubCommitStatusSetter',
-                contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: 'jenkins'],
+                contextSource: [$class: 'ManuallyEnteredCommitContextSource',context: 'jenkins'],
                 statusResultSource: [$class: 'ConditionalStatusResultSource', results: [
                     [$class: 'AnyBuildResult', state: 'SUCCESS', message: 'Build & test completed!']
                 ]]
             ])
-            echo 'Build and test completed successfully for changed services!'
+             echo 'Build and test completed successfully for changed services!'
         }
 
-        failure {
+        failure{
             step([
                 $class: 'GitHubCommitStatusSetter',
                 contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: 'jenkins'],
