@@ -27,7 +27,7 @@ pipeline {
             steps {
                 script {
                     sh 'git fetch origin main'
-                    
+
                     def servicesList = env.SERVICES.split(',')
                     def targetBranch = env.CHANGE_TARGET ?: "main"
                     def commonAncestor = sh(returnStdout: true, script: "git merge-base HEAD origin/${targetBranch}").trim()
@@ -48,6 +48,7 @@ pipeline {
                 }
             }
         }
+
         stage('Test') {
             steps {
                 script {
@@ -83,56 +84,38 @@ pipeline {
                                 coverageResult = actions.get(0)
                             }
 
-
                             if (coverageResult != null) {
-                                println "coverageResult class: ${coverageResult.getClass().getName()}" // In ra tên class
+                                println "coverageResult class: ${coverageResult.getClass().getName()}"
 
-                                // Thử getValueForMetric
+                                // Lấy giá trị line coverage
                                 def lineCoverageValue = coverageResult.getValueForMetric(io.jenkins.plugins.coverage.metrics.model.CoverageMetric.LINE)
 
                                 if (lineCoverageValue != null) {
                                     println "lineCoverageValue: ${lineCoverageValue}"
-                                    println "lineCoverageValue class: ${lineCoverageValue.getClass().getName()}" //in ra class của coverage
+                                    println "lineCoverageValue class: ${lineCoverageValue.getClass().getName()}"
                                     def lineCoverage = lineCoverageValue.getPercentageFloat()
-
 
                                     echo "Line coverage for ${service}: ${lineCoverage}%"
 
                                     if (lineCoverage < 70.0) {
-                                        echo "Coverage for ${service} is below 70%.  Marking build as unstable."
-                                        failedServices.add(service) // Thêm service vào danh sách failed
+                                        echo "Coverage for ${service} is below 70%. Marking build as failure."
+                                        failedServices.add(service)
                                     }
-
                                 } else {
-                                    echo "Could not retrieve coverage information for ${service}."
-                                    // Thêm các câu lệnh println để debug
-                                    println "coverageResult is null"
-                                    if (currentBuild != null) {
-                                        println "currentBuild is not null"
-                                        if(currentBuild.rawBuild != null) {
-                                        println "currentBuild.rawBuild is not null"
-                                            def allActions = currentBuild.rawBuild.getActions() // Lấy tất cả các actions, không lọc
-                                            println "All actions:"
-                                            for (action in allActions) {
-                                                println "  - ${action.getClass().getName()}: ${action.toString()}"
-                                            }
-                                        } else {
-                                        println "currentBuild.rawBuild is null"
-                                        }
-
-                                    } else {
-                                    println "currentBuild is null"
-                                    }
-                                    failedServices.add(service) // coi như coverage không đạt, để an toàn
-
+                                    echo "Could not get line coverage value using getValueForMetric"
+                                    failedServices.add(service) // Thêm service vào failedServices nếu không lấy được coverage
                                 }
+                            } else {
+                                echo "Could not retrieve coverage information for ${service}."
+                                failedServices.add(service)  // Thêm service vào failedServices nếu không lấy được coverageResult
+                            }
                         }
 
-                         // Kiểm tra danh sách failedServices và đánh dấu build failure nếu cần
+                        // Kiểm tra danh sách failedServices và đánh dấu build failure nếu cần
                         if (!failedServices.isEmpty()) {
                             currentBuild.result = 'FAILURE'
                             echo "The following services failed to meet the coverage threshold: ${failedServices.join(', ')}"
-                         }
+                        }
                     }
                 }
             }
