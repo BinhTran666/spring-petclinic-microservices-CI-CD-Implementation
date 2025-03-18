@@ -86,40 +86,46 @@ pipeline {
 
                             if (coverageResult != null) {
                                 println "coverageResult class: ${coverageResult.getClass().getName()}" // In ra tên class
-                                println "coverageResult methods:"
-                                coverageResult.getClass().getMethods().each { println "  - ${it.getName()}" } // In ra tên tất cả các phương
+
+                                // Thử getValueForMetric
+                                def lineCoverageValue = coverageResult.getValueForMetric(io.jenkins.plugins.coverage.metrics.model.CoverageMetric.LINE)
+
+                                if (lineCoverageValue != null) {
+                                    println "lineCoverageValue: ${lineCoverageValue}"
+                                    println "lineCoverageValue class: ${lineCoverageValue.getClass().getName()}" //in ra class của coverage
+                                    def lineCoverage = lineCoverageValue.getPercentageFloat()
 
 
-                                // def lineCoverage = coverageResult.getLineCoverage().getPercentageFloat()
-                                // echo "Line coverage for ${service}: ${lineCoverage}%"
+                                    echo "Line coverage for ${service}: ${lineCoverage}%"
 
-                                // if (lineCoverage < 70.0) {
-                                //     echo "Coverage for ${service} is below 70%.  Marking build as unstable."
-                                //     failedServices.add(service) // Thêm service vào danh sách failed
-                                // }
-                            } else {
-                                echo "Could not retrieve coverage information for ${service}."
-                                // Thêm các câu lệnh println để debug
-                                println "coverageResult is null"
-                                if (currentBuild != null) {
-                                    println "currentBuild is not null"
-                                    if(currentBuild.rawBuild != null) {
-                                    println "currentBuild.rawBuild is not null"
-                                        def allActions = currentBuild.rawBuild.getActions() // Lấy tất cả các actions, không lọc
-                                        println "All actions:"
-                                        for (action in allActions) {
-                                            println "  - ${action.getClass().getName()}: ${action.toString()}"
-                                        }
-                                    } else {
-                                    println "currentBuild.rawBuild is null"
+                                    if (lineCoverage < 70.0) {
+                                        echo "Coverage for ${service} is below 70%.  Marking build as unstable."
+                                        failedServices.add(service) // Thêm service vào danh sách failed
                                     }
 
                                 } else {
-                                println "currentBuild is null"
-                                }
-                                failedServices.add(service) // coi như coverage không đạt, để an toàn
+                                    echo "Could not retrieve coverage information for ${service}."
+                                    // Thêm các câu lệnh println để debug
+                                    println "coverageResult is null"
+                                    if (currentBuild != null) {
+                                        println "currentBuild is not null"
+                                        if(currentBuild.rawBuild != null) {
+                                        println "currentBuild.rawBuild is not null"
+                                            def allActions = currentBuild.rawBuild.getActions() // Lấy tất cả các actions, không lọc
+                                            println "All actions:"
+                                            for (action in allActions) {
+                                                println "  - ${action.getClass().getName()}: ${action.toString()}"
+                                            }
+                                        } else {
+                                        println "currentBuild.rawBuild is null"
+                                        }
 
-                            }
+                                    } else {
+                                    println "currentBuild is null"
+                                    }
+                                    failedServices.add(service) // coi như coverage không đạt, để an toàn
+
+                                }
                         }
 
                          // Kiểm tra danh sách failedServices và đánh dấu build failure nếu cần
