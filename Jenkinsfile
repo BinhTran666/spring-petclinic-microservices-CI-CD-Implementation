@@ -83,11 +83,12 @@ pipeline {
                                 coverageResult = actions.get(0)
                             }
 
-                            if (coverageResult != null) {
+                             if (coverageResult != null) {
                                 def coverageString = coverageResult.toString()
                                 println "coverageString: ${coverageString}"
 
-                                def matcher = (coverageString =~ /LINE: (\d+\.\d+)%/)
+                                // Tạo một matcher mới cho mỗi service
+                                def matcher = (coverageString =~ /LINE: (\d+\.\d+)%/)  // <--- CHUYỂN VÀO ĐÂY
                                 if (matcher.find()) {
                                     def lineCoverage = matcher[0][1].toFloat()
                                     echo "Line coverage for ${service}: ${lineCoverage}%"
