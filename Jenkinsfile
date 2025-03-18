@@ -48,7 +48,6 @@ pipeline {
                 }
             }
         }
-
         stage('Test') {
             steps {
                 script {
@@ -65,6 +64,8 @@ pipeline {
                 always {
                     script {
                         def servicesToBuild = env.SERVICES_TO_BUILD ? env.SERVICES_TO_BUILD.split(',') : []
+                        def failedServices = [] // Danh sách các service không đạt coverage
+
                         for (service in servicesToBuild) {
                             def junitReportPath = "${service}/target/surefire-reports/*.xml"
                             def junitReportExists = sh(script: "ls ${junitReportPath} 2>/dev/null || echo 'notfound'", returnStdout: true).trim()
@@ -73,8 +74,31 @@ pipeline {
                             } else {
                                 junit junitReportPath
                             }
+
+                            // Ghi nhận coverage và kiểm tra
                             recordCoverage(tools: [[parser: 'JACOCO', pattern: "${service}/target/site/jacoco/jacoco.xml"]])
+                            def coverageResult = currentBuild.rawBuild.getAction(hudson.plugins.jacoco.JacocoBuildAction.class)
+
+                            if (coverageResult != null) {
+                                def lineCoverage = coverageResult.getLineCoverage().getPercentageFloat()
+                                echo "Line coverage for ${service}: ${lineCoverage}%"
+
+                                if (lineCoverage < 70.0) {
+                                    echo "Coverage for ${service} is below 70%.  Marking build as unstable."
+                                    failedServices.add(service) // Thêm service vào danh sách failed
+                                }
+                            } else {
+                                echo "Could not retrieve coverage information for ${service}."
+                                 failedServices.add(service) // coi như coverage không đạt, để an toàn
+
+                            }
                         }
+
+                         // Kiểm tra danh sách failedServices và đánh dấu build failure nếu cần
+                        if (!failedServices.isEmpty()) {
+                            currentBuild.result = 'FAILURE'
+                            echo "The following services failed to meet the coverage threshold: ${failedServices.join(', ')}"
+                         }
                     }
                 }
             }
